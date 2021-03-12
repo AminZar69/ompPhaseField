@@ -40,7 +40,7 @@
 
 using namespace std;
 
-const int numThreads = 20;
+//const int numThreads = 20;
 const int tf = 15000;
 const int step = 5000;
 const double r = 30;
@@ -74,7 +74,7 @@ int main()
 {
 
 
-	omp_set_num_threads(numThreads);
+	//omp_set_num_threads(numThreads);
 	
 	double startTime2 = omp_get_wtime();
 

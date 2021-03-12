@@ -2,7 +2,7 @@
 #define Common_H
 const int nx=256;
 const int ny=256;
-extern const int numThreads;
+//extern const int numThreads;
 extern const int tf;
 extern const int step;
 extern const double r;
