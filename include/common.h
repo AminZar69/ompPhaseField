@@ -1,10 +1,12 @@
-#ifndef Common_H
-#define Common_H
-const int nx=256;
-const int ny=256;
-//extern const int numThreads;
-extern const int tf;
-extern const int step;
+#ifndef COMMON_H
+#define COMMON_H
+
+constexpr int nx = 256;
+constexpr int ny = 256;
+
+extern const int    tf;
+extern const int    step;
+
 extern const double r;
 extern const double rhoL;
 extern const double rhoH;
@@ -18,14 +20,28 @@ extern const double kappa;
 extern const double m;
 extern const double w_c;
 
-extern const int ex[9];
-extern const int ey[9];
+extern const int    ex[9];
+extern const int    ey[9];
 extern const double wa[9];
 
 extern int t;
-extern int is_solid_node[nx+2][ny+2];
-extern double h[9][(nx + 2)][(ny + 2)], g[9][(nx + 2)][(ny + 2)];
-extern double phi[(nx + 2)][(ny + 2)], p[nx+1][ny+1], mu[nx+1][ny+1], dphidx[nx+1][ny+1], dphidy[nx+1][ny+1];
-extern double rho[nx+1][ny+1], ux[nx+1][ny+1], uy[nx+1][ny+1], ni[nx+1][ny+1], nj[nx+1][ny+1]; 
+
+extern int is_solid_node[(nx + 2)][(ny + 2)];
+
+
+extern double h[(nx + 2)][(ny + 2)][9];
+extern double g[(nx + 2)][(ny + 2)][9];
+
+
+extern double phi[(nx + 2)][(ny + 2)];
+extern double p[(nx + 2)][(ny + 2)];
+extern double mu[(nx + 2)][(ny + 2)];
+extern double dphidx[(nx + 2)][(ny + 2)];
+extern double dphidy[(nx + 2)][(ny + 2)];
+extern double rho[(nx + 2)][(ny + 2)];
+extern double ux[(nx + 2)][(ny + 2)];
+extern double uy[(nx + 2)][(ny + 2)];
+extern double ni[(nx + 2)][(ny + 2)];
+extern double nj[(nx + 2)][(ny + 2)];
 
 #endif

@@ -1,75 +1,67 @@
 project := ompPhasefield
-cc := g++
-cxxflags := -fopenmp
+CXX     := g++
+
 srcdir := src
 objdir := obj
 bindir := bin
-objects	:= $(objdir)/main.o $(objdir)/initialization.o $(objdir)/periodicphi.o $(objdir)/gradientcal.o $(objdir)/interfacenormal.o $(objdir)/chemicalpotential.o $(objdir)/setsolid.o $(objdir)/output.o $(objdir)/periodicpopulations.o $(objdir)/collision.o $(objdir)/propagation.o $(objdir)/stresstensorcal.o $(objdir)/viscousforcecal.o $(objdir)/phical.o $(objdir)/hydrocal.o $(objdir)/maxcal.o $(objdir)/totalmass.o  
 
-all: $(project)
+# Build mode: debug (default) or release
+# Override with: make BUILD=release   or   make release
+BUILD ?= debug
 
-####Linking####
-$(project): $(objects) 
-	$(cc) $(objects) -o $(bindir)/$(project) $(cxxflags)
-	
-####Compilation####	
-$(objdir)/initialization.o: $(srcdir)/initialization.cpp
-	$(cc) -c $(srcdir)/initialization.cpp -o $(objdir)/initialization.o $(cxxflags)
-	
-$(objdir)/periodicphi.o: $(srcdir)/periodicphi.cpp
-	$(cc) -c $(srcdir)/periodicphi.cpp -o $(objdir)/periodicphi.o $(cxxflags)
-	
-$(objdir)/gradientcal.o: $(srcdir)/gradientcal.cpp
-	$(cc)  -c $(srcdir)/gradientcal.cpp -o $(objdir)/gradientcal.o $(cxxflags)
-	
-$(objdir)/interfacenormal.o: $(srcdir)/interfacenormal.cpp
-	$(cc)  -c $(srcdir)/interfacenormal.cpp -o $(objdir)/interfacenormal.o $(cxxflags)
-	
-$(objdir)/chemicalpotential.o: $(srcdir)/chemicalpotential.cpp
-	$(cc)  -c $(srcdir)/chemicalpotential.cpp -o $(objdir)/chemicalpotential.o $(cxxflags)
-	
-$(objdir)/setsolid.o: $(srcdir)/setsolid.cpp
-	$(cc)  -c $(srcdir)/setsolid.cpp -o $(objdir)/setsolid.o $(cxxflags)
-	
-$(objdir)/output.o: $(srcdir)/output.cpp
-	$(cc)  -c $(srcdir)/output.cpp -o $(objdir)/output.o $(cxxflags)
-	
-$(objdir)/periodicpopulations.o: $(srcdir)/periodicpopulations.cpp
-	$(cc)  -c $(srcdir)/periodicpopulations.cpp -o $(objdir)/periodicpopulations.o $(cxxflags)
-	
-$(objdir)/collision.o: $(srcdir)/collision.cpp
-	$(cc)  -c $(srcdir)/collision.cpp -o $(objdir)/collision.o $(cxxflags)
-	
-$(objdir)/propagation.o: $(srcdir)/propagation.cpp
-	$(cc)  -c $(srcdir)/propagation.cpp -o $(objdir)/propagation.o $(cxxflags)
-	
-$(objdir)/stresstensorcal.o: $(srcdir)/stresstensorcal.cpp
-	$(cc)  -c $(srcdir)/stresstensorcal.cpp -o $(objdir)/stresstensorcal.o $(cxxflags)
-	
-$(objdir)/viscousforcecal.o: $(srcdir)/viscousforcecal.cpp
-	$(cc)  -c $(srcdir)/viscousforcecal.cpp -o $(objdir)/viscousforcecal.o $(cxxflags)
-	
-$(objdir)/phical.o: $(srcdir)/phical.cpp
-	$(cc)  -c $(srcdir)/phical.cpp -o $(objdir)/phical.o $(cxxflags)
-	
-$(objdir)/hydrocal.o: $(srcdir)/hydrocal.cpp
-	$(cc)  -c $(srcdir)/hydrocal.cpp -o $(objdir)/hydrocal.o $(cxxflags)
-	
-$(objdir)/maxcal.o: $(srcdir)/maxcal.cpp
-	$(cc)  -c $(srcdir)/maxcal.cpp -o $(objdir)/maxcal.o $(cxxflags)
-	
-$(objdir)/totalmass.o: $(srcdir)/totalmass.cpp
-	$(cc)  -c $(srcdir)/totalmass.cpp -o $(objdir)/totalmass.o $(cxxflags)
-	
-$(objdir)/main.o: $(srcdir)/main.cpp
-	$(cc)  -c $(srcdir)/main.cpp -o $(objdir)/main.o $(cxxflags)
-	
-########
-	
-clean:	
-	
-	rm -f $(objdir)/*
+# Common flags
+cxxflags_common := -fopenmp -Wall -Wextra -std=c++17 -MMD -MP
+
+# Mode-specific flags
+cxxflags_release := -O3 -DNDEBUG -march=native
+cxxflags_debug   := -O0 -g -DDEBUG
+
+ifeq ($(BUILD),debug)
+    cxxflags := $(cxxflags_common) $(cxxflags_debug)
+else
+    cxxflags := $(cxxflags_common) $(cxxflags_release)
+endif
+
+# Sources and objects
+sources := main.cpp initialization.cpp periodicphi.cpp gradientcal.cpp \
+           interfacenormal.cpp chemicalpotential.cpp setsolid.cpp \
+           output.cpp periodicpopulations.cpp collision.cpp propagation.cpp \
+           stresstensorcal.cpp viscousforcecal.cpp phical.cpp hydrocal.cpp \
+           maxcal.cpp totalmass.cpp
+
+objects := $(sources:%.cpp=$(objdir)/%.o)
+deps    := $(objects:.o=.d)
+
+# Targets
+.PHONY: all clean debug release
+
+all: $(bindir)/$(project)
+
+debug:
+	$(MAKE) BUILD=debug
+
+release:
+	$(MAKE) BUILD=release
+
+# Linking 
+$(bindir)/$(project): $(objects) | $(bindir)
+	$(CXX) $(objects) -o $@ $(cxxflags)
+
+# Compilation 
+$(objdir)/%.o: $(srcdir)/%.cpp | $(objdir)
+	$(CXX) -c $< -o $@ $(cxxflags)
+
+# Ensure output directories exist
+$(objdir):
+	mkdir -p $(objdir)
+
+$(bindir):
+	mkdir -p $(bindir)
+
+# ---- Clean ----
+clean:
+	rm -f $(objdir)/*.o $(objdir)/*.d
 	rm -f $(bindir)/*
-	
-	
-	
+
+# ---- Include auto-generated header dependencies ----
+-include $(deps)

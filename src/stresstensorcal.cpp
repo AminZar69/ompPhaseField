@@ -1,41 +1,22 @@
-/* ============================== License GPLv3 ===================================
-    ompPhaseField is a multiphase flow solver based on th lattice Boltzmann method accelerated by
-	utilising OpenMP.
-    Copyright (C) 2021 Amin Zar, aminpopjoury@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- ================================================================================ */
-
 #include "../include/common.h"
 #include "../include/stresstensorcal.h"
 
-void StressTensorCal(double gneq[9],double &sxx, double &sxy, double &syy ) {
-	
-	int z;
-	sxx = 0;
-	sxy = 0;
-	syy = 0;
-	
-	for (z = 1; z < 9; z++) {
+void StressTensorCal(double gneq[9], double& sxx, double& sxy, double& syy) {
 
-		sxx += gneq[z] * ex[z] * ex[z];
-		sxy += gneq[z] * ex[z] * ey[z];
-		syy += gneq[z] * ey[z] * ey[z];
+    sxx = 0.0;
+    sxy = 0.0;
+    syy = 0.0;
 
+    // z = 0 is the rest direction: ex[0] = ey[0] = 0,
+    // loop starts at z = 1.
+    for (int z = 1; z < 9; z++) {
 
-	}
-	
+        double g_z = gneq[z];
+        double ex_z = ex[z];
+        double ey_z = ey[z];
 
-	
+        sxx += g_z * ex_z * ex_z;
+        sxy += g_z * ex_z * ey_z;
+        syy += g_z * ey_z * ey_z;
+    }
 }

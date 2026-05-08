@@ -1,119 +1,75 @@
-/* ============================== License GPLv3 ===================================
-    ompPhaseField is a multiphase flow solver based on th lattice Boltzmann method accelerated by
-	utilising OpenMP.
-    Copyright (C) 2021 Amin Zar, aminpopjoury@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- ================================================================================ */
-
-
-#include<omp.h>
+#include <omp.h>
 #include "../include/common.h"
 #include "../include/collision.h"
 #include "../include/interfacenormal.h"
 #include "../include/viscousforcecal.h"
 
-
 void Collision() {
-	
-	int x, y, z;
 
-	double gamma[9], gaWa[9], heq[9], geq[9], hlp[9], ef[9], tauu;
-	double fpx, fpy, fmx, fmy, fx, fy, u2;
-	double gneq[9], eu[9];
+    InterfaceNormal();
 
+#pragma omp parallel for schedule(static) 
+    for (int x = 1; x < nx + 1; x++) {
+        for (int y = 1; y < ny + 1; y++) {
 
-	InterfaceNormal();
-	
-	#pragma omp parallel for private(x, z, u2, eu, gaWa, gamma, ef, hlp, heq, geq, gneq, fpx, fpy, tauu, fmx, fmy, fx, fy) schedule(static) collapse(2)
-	for (y = 1; y < ny + 1; y++) {
-		
-		for (x = 1; x< nx + 1; x++) {
+            double phi_v = phi[x][y];
+            double ux_v = ux[x][y];
+            double uy_v = uy[x][y];
+            double rho_v = rho[x][y];
+            double p_v = p[x][y];
+            double mu_v = mu[x][y];
+            double dpdx_v = dphidx[x][y];
+            double dpdy_v = dphidy[x][y];
+            double ni_v = ni[x][y];
+            double nj_v = nj[x][y];
+            int solid = is_solid_node[x][y];
 
+            double u2 = ux_v * ux_v + uy_v * uy_v;
+            double phi_factor = (1.0 - 4.0 * (phi_v - 0.5) * (phi_v - 0.5)) / w;
+            double tauu = tauL + phi_v * (tauH - tauL);
+            double inv_tau = 1.0 / tauu;
+            double one_minus_inv_tau = 1.0 - inv_tau;
+            double fpx = -p_v * drho3 * dpdx_v;
+            double fpy = -p_v * drho3 * dpdy_v;
 
-			
-			
-			u2 = ux[x][y] * ux[x][y] + uy[x][y] * uy[x][y];
-	
-			
+            // Local arrays (stack, implicitly private per thread)
+            double gaWa[9], ef[9], hlp[9], heq[9], geq[9], gneq[9], eu[9];
 
-			for (z = 0; z < 9; z++) {
-				
-				eu[z] = ex[z] * ux[x][y] + ey[z] * uy[x][y];
+            // h collision and geq/gneq setup
+            for (int z = 0; z < 9; z++) {
+                eu[z] = ex[z] * ux_v + ey[z] * uy_v;
+                gaWa[z] = wa[z] * (eu[z] * (3.0 + 4.5 * eu[z]) - 1.5 * u2);
 
-				gaWa[z] = wa[z] * (eu[z] * (3. + 4.5*eu[z]) - 1.5*u2);
-			
-				gamma[z] = gaWa[z] + wa[z];
+                double gamma_z = gaWa[z] + wa[z];
+                ef[z] = phi_factor * (ex[z] * ni_v + ey[z] * nj_v);
+                hlp[z] = wa[z] * ef[z];
+                heq[z] = phi_v * gamma_z - 0.5 * hlp[z];
 
-				ef[z] = (1. - 4. * (phi[x][y] - 0.5) * (phi[x][y] - 0.5)) / w * (ex[z] * ni[x][y] + ey[z] * nj[x][y]);
+                if (solid == 0) {
+                    h[x][y][z] = h[x][y][z] * (1.0 - w_c) + heq[z] * w_c + hlp[z];
+                }
 
-				hlp[z] = wa[z] * ef[z];
+                geq[z] = p_v * wa[z] + gaWa[z];
+                gneq[z] = g[x][y][z] - geq[z];
+            }
 
-				heq[z] = phi[x][y] * gamma[z] - 0.5 * hlp[z];
+            // Force calculation
+            double fmx, fmy;
+            ViscousForceCal(tauu, dpdx_v, dpdy_v, gneq, fmx, fmy);
 
-				if (is_solid_node[x][y] == 0) {
+            double fx = mu_v * dpdx_v + fpx + fmx;
+            double fy = mu_v * dpdy_v + fpy + fmy;
 
+            // g collision 
+            for (int z = 0; z < 9; z++) {
+                ef[z] = ex[z] * fx + ey[z] * fy;
+                hlp[z] = 3.0 * wa[z] * ef[z] / rho_v;
+                geq[z] = p_v * wa[z] + gaWa[z] - 0.5 * hlp[z];
 
-					h[z][x][y] = h[z][x][y] * (1. - w_c) + heq[z] * w_c + hlp[z];
-
-
-				}
-
-				geq[z] = p[x][y] * wa[z] + gaWa[z];
-
-				gneq[z] = g[z][x][y] - geq[z];
-
-			}
-
-
-			fpx = -p[x][y] * drho3 * dphidx[x][y];
-			fpy = -p[x][y] * drho3 * dphidy[x][y];
-
-			tauu = tauL + phi[x][y] * (tauH - tauL);
-
-			ViscousForceCal(tauu, dphidx[x][y], dphidy[x][y], gneq, fmx, fmy);
-
-
-			fx = mu[x][y] * dphidx[x][y] + fpx + fmx ;
-			fy = mu[x][y] * dphidy[x][y] + fpy + fmy;
-
-			for (z = 0; z < 9; z++) {
-
-				ef[z] = ex[z] * fx + ey[z] * fy;
-				hlp[z] = 3. * wa[z] * ef[z] / rho[x][y];
-				geq[z] = p[x][y] * wa[z] + gaWa[z] - 0.5 * hlp[z];
-
-
-
-				if (is_solid_node[x][y]==0) {
-
-
-
-					g[z][x][y] = g[z][x][y] * (1. - (1. / tauu)) + geq[z] * (1. / tauu) + hlp[z];
-
-
-
-				}
-				
-
-			}
-
-
-		}
-
-
-	}
-
-
+                if (solid == 0) {
+                    g[x][y][z] = g[x][y][z] * one_minus_inv_tau + geq[z] * inv_tau + hlp[z];
+                }
+            }
+        }
+    }
 }

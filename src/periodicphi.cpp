@@ -1,50 +1,20 @@
-/* ============================== License GPLv3 ===================================
-    ompPhaseField is a multiphase flow solver based on th lattice Boltzmann method accelerated by
-	utilising OpenMP.
-    Copyright (C) 2021 Amin Zar, aminpopjoury@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- ================================================================================ */
-
-#include<omp.h>
+#include <omp.h>
 #include "../include/common.h"
 #include "../include/periodicphi.h"
 
-void PeriodicPhi(double a[nx+2][ny+2]) {
-	
-	int x, y;
+void PeriodicPhi(double a[(nx + 2)][(ny + 2)]) {
 
-	#pragma omp parallel
-	{
-		#pragma omp for
-		for (x = 0; x <= nx + 1; x++) {
+    // x-direction periodic boundaries (left and right)
+#pragma omp parallel for schedule(static)
+    for (int y = 0; y <= ny + 1; y++) {
+        a[0][y] = a[nx][y];    // left ghost  ← right interior
+        a[nx + 1][y] = a[1][y];     // right ghost ← left interior
+    }
 
-			a[x][0] = a[x][ny];
-			
-			a[x][ny + 1] = a[x][1];  
-
-		}
-		#pragma omp for
-		for (y = 0;y <= ny + 1;y++) {
-
-			a[0][y] = a[nx][y]; 
-			
-			a[nx + 1][y] = a[1][y];  
-
-
-		}
-		
-	}
-
+    // y-direction periodic boundaries (bottom and top)
+#pragma omp parallel for schedule(static)
+    for (int x = 0; x <= nx + 1; x++) {
+        a[x][0] = a[x][ny];    // bottom ghost ← top interior
+        a[x][ny + 1] = a[x][1];     // top ghost    ← bottom interior
+    }
 }

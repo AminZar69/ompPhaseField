@@ -1,23 +1,4 @@
-/* ============================== License GPLv3 ===================================
-    ompPhaseField is a multiphase flow solver based on th lattice Boltzmann method accelerated by
-	utilising OpenMP.
-    Copyright (C) 2021 Amin Zar, aminpopjoury@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- ================================================================================ */
-
-#include<omp.h>
+#include <omp.h>
 #include "../include/common.h"
 #include "../include/hydrocal.h"
 #include "../include/periodicphi.h"
@@ -27,74 +8,67 @@
 
 void HydroCal() {
 
-	int x, y, z;
-	double gaWa[9], geq[9];
-	double fpx, fpy, fmx, fmy, fx, fy, tauu, sum, u2;
-	double gneq[9], eu[9];
+    PeriodicPhi(phi);
+    GradientCal();
+    ChemicalPotential();
 
-	PeriodicPhi(phi);
-	GradientCal();
-	ChemicalPotential();
+#pragma omp parallel for schedule(static) 
+    for (int x = 1; x < nx + 1; x++) {
+        for (int y = 1; y < ny + 1; y++) {
 
-	#pragma omp parallel for private(x, z, fpx, fpy, gaWa, geq, gneq, tauu, fmx, fmy, fx, fy, u2, eu) schedule(static) collapse(2)
-	for (y = 1; y < ny + 1; y++) {
+            double phi_v = phi[x][y];
+            double ux_v = ux[x][y];
+            double uy_v = uy[x][y];
+            double rho_v = rho[x][y];
+            double mu_v = mu[x][y];
+            double dpdx_v = dphidx[x][y];
+            double dpdy_v = dphidy[x][y];
+            int solid = is_solid_node[x][y];
 
-		for (x = 1; x < nx + 1; x++) {
-			
-			
+            double p_v = 0.0;
+            for (int z = 0; z < 9; z++) {
+                p_v += g[x][y][z];
+            }
+            p[x][y] = p_v;
 
-			p[x][y] = g[0][x][y] + g[1][x][y] + g[2][x][y] + g[3][x][y] + g[4][x][y] +\
-								g[5][x][y] + g[6][x][y] + g[7][x][y] + g[8][x][y];
+            double fpx = -p_v * drho3 * dpdx_v;
+            double fpy = -p_v * drho3 * dpdy_v;
+            double u2 = ux_v * ux_v + uy_v * uy_v;
+            double tauu = tauL + phi_v * (tauH - tauL);
 
+            // non-equilibrium part for stress tensor
+            double gaWa[9], geq[9], gneq[9], eu[9];
+            for (int z = 0; z < 9; z++) {
+                eu[z] = ex[z] * ux_v + ey[z] * uy_v;
+                gaWa[z] = wa[z] * (eu[z] * (3.0 + 4.5 * eu[z]) - 1.5 * u2);
+                geq[z] = p_v * wa[z] + gaWa[z];
+                gneq[z] = g[x][y][z] - geq[z];
+            }
 
-			fpx = -p[x][y] * drho3 * dphidx[x][y];
-			fpy = -p[x][y] * drho3 * dphidy[x][y];
+            // Force calculation
+            double fmx, fmy;
+            ViscousForceCal(tauu, dpdx_v, dpdy_v, gneq, fmx, fmy);
 
-			
-			u2 = ux[x][y] * ux[x][y] + uy[x][y] * uy[x][y];
-	
-			for (z = 0; z < 9; z++) {
+            double fx = mu_v * dpdx_v + fpx + fmx;
+            double fy = mu_v * dpdy_v + fpy + fmy;
 
-				eu[z] = ex[z] * ux[x][y] + ey[z] * uy[x][y];
+            // Velocity update 
+            // Compute momentum sum once, then conditionally add force term.
+            double mom_x = g[x][y][1] - g[x][y][3] + g[x][y][5]
+                - g[x][y][6] - g[x][y][7] + g[x][y][8];
 
-				gaWa[z] = wa[z] * (eu[z] * (3. + 4.5*eu[z]) - 1.5*u2);
-		
-				geq[z] = p[x][y] * wa[z] + gaWa[z];
+            double mom_y = g[x][y][2] - g[x][y][4] + g[x][y][5]
+                + g[x][y][6] - g[x][y][7] - g[x][y][8];
 
-				gneq[z] = g[z][x][y] - geq[z];
-			}
-			
-			
-
-			tauu = tauL + phi[x][y] * (tauH - tauL);
-
-			ViscousForceCal(tauu, dphidx[x][y], dphidy[x][y], gneq, fmx, fmy);
-
-		
-
-			fx = mu[x][y] * dphidx[x][y] + fpx + fmx;
-			fy = mu[x][y] * dphidy[x][y] + fpy + fmy;
-
-
-			if (is_solid_node[x][y]==0) {
-
-				ux[x][y] = (g[1][x][y] - g[3][x][y] + g[5][x][y] - g[6][x][y] - g[7][x][y] + g[8][x][y]) + (0.5*fx / rho[x][y]);
-				uy[x][y] = (g[2][x][y] - g[4][x][y] + g[5][x][y] + g[6][x][y] - g[7][x][y] - g[8][x][y]) + (0.5*fy / rho[x][y]);
-
-			}
-
-			else {
-
-				ux[x][y] = (g[1][x][y] - g[3][x][y] + g[5][x][y] - g[6][x][y] - g[7][x][y] + g[8][x][y]);
-				uy[x][y] = (g[2][x][y] - g[4][x][y] + g[5][x][y] + g[6][x][y] - g[7][x][y] - g[8][x][y]);
-
-			}
-
-
-		}
-
-
-	}
-
-
+            if (solid == 0) {
+                double half_inv_rho = 0.5 / rho_v;
+                ux[x][y] = mom_x + fx * half_inv_rho;
+                uy[x][y] = mom_y + fy * half_inv_rho;
+            }
+            else {
+                ux[x][y] = mom_x;
+                uy[x][y] = mom_y;
+            }
+        }
+    }
 }

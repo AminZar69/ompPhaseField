@@ -1,22 +1,3 @@
-/* ============================== License GPLv3 ===================================
-    ompPhaseField is a multiphase flow solver based on th lattice Boltzmann method accelerated by
-	utilising OpenMP.
-    Copyright (C) 2021 Amin Zar, aminpopjoury@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- ================================================================================ */
-
 #include <cmath>
 #include <cstdlib>
 #include "../include/common.h"
@@ -27,73 +8,64 @@
 
 void Initialization() {
 
-int x, y, z;
-double gamma[9], gaWa[9], heq[9], geq[9], hlp[9], ef[9], u2, eu[9];
-double ri;
+    const double half_nx = nx / 2.0;
+    const double half_ny = ny / 2.0;
+    const double inv_w = 1.0 / w;
 
-	for (y = 0; y <= (ny + 1); y++) {
-		for (x = 0; x <= (nx + 1); x++) {
+    // Initialise phi, zero h and g in one loop 
+    for (int x = 0; x <= nx + 1; x++) {
+        for (int y = 0; y <= ny + 1; y++) {
 
-			ri = sqrt(((x - nx/2.) * (x - nx/2.)) + ((y - nx/2.) * (y - nx/2.)));
-			
-			phi[x][y] = 0.5 + 0.5 * tanh((2. * (r - ri)) / w);	
-		   
-		}
-	}
+            double dx = x - half_nx;
+            double dy = y - half_ny;
+            double ri = std::sqrt(dx * dx + dy * dy);
 
-	for (x = 0; x < nx+2; x++) {
-		for (y = 0; y < ny+2; y++) {
-			for (z = 0; z < 9; z++) {
-				h[z][x][y] = 0;
-				g[z][x][y] = 0;
-			}
-		}
-	}
-	
-	
-	PeriodicPhi(phi);
-	ChemicalPotential();
-	GradientCal();
-	InterfaceNormal();
+            phi[x][y] = 0.5 + 0.5 * std::tanh(2.0 * (r - ri) * inv_w);
 
-	for (y= 1; y < ny + 1; y++) {
-		for (x= 1; x < nx + 1; x++) {
+            for (int z = 0; z < 9; z++) {
+                h[x][y][z] = 0.0;
+                g[x][y][z] = 0.0;
+            }
+        }
+    }
 
-			rho[x][y] = rhoL + phi[x][y] * (rhoH - rhoL);
-			p[x][y] = 0.;//p[x][y] + phi[x][y] * sigma/r /(rho[x][y]/3.);
-			ux[x][y] =0.;
-			uy[x][y] =0.;
-		
+    // Boundary and derived field setup
+    PeriodicPhi(phi);
+    ChemicalPotential();
+    GradientCal();
+    InterfaceNormal();
 
-		
-			u2 = ux[x][y] * ux[x][y] + uy[x][y] * uy[x][y];
-	
-			for (z = 0; z < 9; z++) {
-				
-				eu[z] = ex[z] * ux[x][y] + ey[z] * uy[x][y];
+    // set macroscopic fields and distribution functions
+    for (int y = 1; y < ny + 1; y++) {
+        for (int x = 1; x < nx + 1; x++) {
 
-				gaWa[z] = wa[z] * (eu[z] * (3. + 4.5*eu[z]) - 1.5*u2);
+            // Caching global lookups used multiple times and
+            // preventing register reuse
+            double phi_v = phi[x][y];
+            double ni_v = ni[x][y];
+            double nj_v = nj[x][y];
 
-				gamma[z] = gaWa[z] + wa[z];
+            rho[x][y] = rhoL + phi_v * (rhoH - rhoL);
+            p[x][y] = 0.0;
+            ux[x][y] = 0.0;
+            uy[x][y] = 0.0;
 
-		
 
-				ef[z] = (1. - 4. * (phi[x][y] - 0.5) * (phi[x][y] - 0.5)) / w * (ex[z] * ni[x][y] + ey[z] * nj[x][y]);
 
-				hlp[z] = wa[z] * ef[z];
+            // depends only on phi, not z
+            double phi_factor = (1.0 - 4.0 * (phi_v - 0.5) * (phi_v - 0.5)) * inv_w;
 
-				h[z][x][y] = phi[x][y] * gamma[z] - 0.5 * hlp[z];
+            for (int z = 0; z < 9; z++) {
+                double wa_z = wa[z];
+                double ef_z = phi_factor * (ex[z] * ni_v + ey[z] * nj_v);
 
-				
+                // gamma[z] = wa[z] (since gaWa = 0 when u = 0)
+                // h = phi * gamma - 0.5 * wa * ef
+                h[x][y][z] = phi_v * wa_z - 0.5 * wa_z * ef_z;
 
-				g[z][x][y] = p[x][y] * wa[z] + gaWa[z];
-		
-				
-				
-			}
-		
-		}
-	
-	}
-	
+                // g = p * wa + gaWa = p * wa (since gaWa = 0 when u = 0)
+                g[x][y][z] = p[x][y] * wa_z;
+            }
+        }
+    }
 }
