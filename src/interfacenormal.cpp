@@ -1,58 +1,24 @@
-/* ============================== License GPLv3 ===================================
-    ompPhaseField is a multiphase flow solver based on th lattice Boltzmann method accelerated by
-	utilising OpenMP.
-    Copyright (C) 2021 Amin Zar, aminpopjoury@gmail.com
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
- ================================================================================ */
-
 #include <cmath>
-#include <cstdlib>
-#include<omp.h>
+#include <omp.h>
 #include "../include/common.h"
 #include "../include/interfacenormal.h"
 
 void InterfaceNormal() {
-	
-	int x, y;
-	double tmp = 0;
-	
-	#pragma omp parallel for private(x, tmp) schedule(static) collapse(2)
-	for (y = 1; y < (ny + 1); y++) {
-		
-		for (x = 1; x < (nx + 1); x++) {
 
-			tmp = sqrt(dphidx[x][y] * dphidx[x][y] + dphidy[x][y] * dphidy[x][y]);
-				if (tmp>0) {
+#pragma omp parallel for schedule(static)
+    for (int x = 1; x < nx + 1; x++) {
+        for (int y = 1; y < ny + 1; y++) {
 
-					ni[x][y] = dphidx[x][y] / tmp;
-					nj[x][y] = dphidy[x][y] / tmp;
+            double dpdx = dphidx[x][y];
+            double dpdy = dphidy[x][y];
 
-				}
+            // 1e-16 is below double precision noise for any real gradient
+            // but prevents division by zero when both gradients are exactly 0.
+            double tmp = std::sqrt(dpdx * dpdx + dpdy * dpdy + 1e-16);
+            double inv_tmp = 1.0 / tmp;
 
-				
-				else {
-
-					tmp = sqrt(dphidx[x][y] * dphidx[x][y] + dphidy[x][y] * dphidy[x][y] + 1e-32);
-					ni[x][y] = dphidx[x][y] / tmp;
-					nj[x][y] = dphidy[x][y] / tmp;
-
-
-				}
-
-		}
-
-	}
-
+            ni[x][y] = dpdx * inv_tmp;
+            nj[x][y] = dpdy * inv_tmp;
+        }
+    }
 }
