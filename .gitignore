@@ -30,3 +30,82 @@
 *.exe
 *.out
 *.app
+
+# ─── C++ Compiler Output (Linux) ───────────────────────────────────────────────
+
+# GCC/Clang intermediate files
+*.ii        # Preprocessed C++ source
+*.s         # Assembly output
+*.su        # GCC stack usage files
+
+# GDB / LLDB debug info
+*.dSYM/
+*.dwp
+
+# CMake / Make build artefacts
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Build directories (common conventions)
+build/
+build-*/
+out/
+
+# ─── C++ Compiler Output (Windows) ─────────────────────────────────────────────
+
+# MSVC intermediate files
+*.pdb       # Program database (debug symbols)
+*.ilk       # Incremental linker state
+*.exp       # Export file (from lib generation)
+*.map       # Linker map file
+*.idb       # Minimal rebuild info (older MSVC)
+*.ipdb      # Incremental PDB (newer MSVC)
+*.iobj      # Incremental object (newer MSVC)
+*.pgc       # Profile-guided optimisation counts
+*.pgd       # Profile-guided optimisation database
+
+# Windows resource compiler
+*.res
+*.rc2
+
+# Visual Studio artefacts
+.vs/
+*.vcxproj.user
+*.VC.db
+*.VC.opendb
+x64/
+x86/
+Debug/
+Release/
+RelWithDebInfo/
+MinSizeRel/
+
+# ─── VTK Files ──────────────────────────────────────────────────────────────────
+
+*.vtk       # Legacy VTK format
+*.vtp       # VTK PolyData (XML)
+*.vtu       # VTK UnstructuredGrid (XML)
+*.vts       # VTK StructuredGrid (XML)
+*.vtr       # VTK RectilinearGrid (XML)
+*.vti       # VTK ImageData (XML)
+*.pvd       # VTK ParaView collection
+*.pvtp      # Parallel VTK PolyData
+*.pvtu      # Parallel VTK UnstructuredGrid
+*.pvts      # Parallel VTK StructuredGrid
+*.pvtr      # Parallel VTK RectilinearGrid
+
+# ─── Linux Project Structure ────────────────────────────────────────────────────
+
+# Compiled objects
+obj/
+obj/**/*.o
+obj/**/*.lo
+obj/**/*.slo
+
+# Binaries
+bin/
+bin/**/*.out
+bin/**/*.app
