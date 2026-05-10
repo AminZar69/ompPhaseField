@@ -9,6 +9,12 @@ The g++ compiler is the only requirement for running this package. The "-fopenmp
     make
     cd bin
     ./ompPhasefield
+
+    - make                  Default: debug build
+    - make debug            Same as above
+    - make release          Optimised build
+    - make profile          Optimised + debug symbols (for perf)
+    - make clean            Clean all artefacts
     
 ### Example of use
 The number of threads can be chosen via setting the environment variable OMP_NUM_THREADS to the desired as shown below:

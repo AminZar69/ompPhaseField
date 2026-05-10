@@ -5,24 +5,27 @@ srcdir := src
 objdir := obj
 bindir := bin
 
-# Build mode: debug (default) or release
-# Override with: make BUILD=release   or   make release
+# Build mode: debug (default), release, or profile
+# Override with: make BUILD=release   or   make release / make profile
 BUILD ?= debug
 
 # Common flags
 cxxflags_common := -fopenmp -Wall -Wextra -std=c++17 -MMD -MP
 
-# Mode-specific flags
+# Mode-specific flags 
 cxxflags_release := -O3 -DNDEBUG -march=native
 cxxflags_debug   := -O0 -g -DDEBUG
+cxxflags_profile := -O3 -g -DNDEBUG -march=native -fno-omit-frame-pointer
 
 ifeq ($(BUILD),debug)
     cxxflags := $(cxxflags_common) $(cxxflags_debug)
+else ifeq ($(BUILD),profile)
+    cxxflags := $(cxxflags_common) $(cxxflags_profile)
 else
     cxxflags := $(cxxflags_common) $(cxxflags_release)
 endif
 
-# Sources and objects
+# Sources and objects 
 sources := main.cpp initialization.cpp periodicphi.cpp gradientcal.cpp \
            interfacenormal.cpp chemicalpotential.cpp setsolid.cpp \
            output.cpp periodicpopulations.cpp collision.cpp propagation.cpp \
@@ -32,8 +35,8 @@ sources := main.cpp initialization.cpp periodicphi.cpp gradientcal.cpp \
 objects := $(sources:%.cpp=$(objdir)/%.o)
 deps    := $(objects:.o=.d)
 
-# Targets
-.PHONY: all clean debug release
+# Targets 
+.PHONY: all clean debug release profile
 
 all: $(bindir)/$(project)
 
@@ -43,7 +46,10 @@ debug:
 release:
 	$(MAKE) BUILD=release
 
-# Linking 
+profile:
+	$(MAKE) BUILD=profile
+
+# ---- Linking ----
 $(bindir)/$(project): $(objects) | $(bindir)
 	$(CXX) $(objects) -o $@ $(cxxflags)
 
@@ -58,10 +64,10 @@ $(objdir):
 $(bindir):
 	mkdir -p $(bindir)
 
-# ---- Clean ----
+# Clean 
 clean:
 	rm -f $(objdir)/*.o $(objdir)/*.d
 	rm -f $(bindir)/*
 
-# ---- Include auto-generated header dependencies ----
+# Include auto-generated header dependencies
 -include $(deps)

@@ -22,8 +22,8 @@
 
 
  // Simulation control 
-const int    tf = 10000;
-const int    step = 5000; // Determines when to write the result file
+const int    tf = 2000;
+const int    step = 500; // Determines when to write the result file
 
 // Physical parameters
 const double r = 30;
@@ -39,7 +39,7 @@ const double kappa = 1.5 * sigma * w;
 const double m = 0.02;
 const double w_c = 1.0 / (0.5 + 3.0 * m);
 
-// 2Q9 lattice constants
+// D2Q9 lattice constants
 const int    ex[9] = { 0, 1, 0,-1, 0, 1,-1,-1, 1 };
 const int    ey[9] = { 0, 0, 1, 0,-1, 1, 1,-1,-1 };
 const double wa[9] = { 4.0 / 9.0,
