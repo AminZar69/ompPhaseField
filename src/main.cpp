@@ -22,8 +22,8 @@
 
 
  // Simulation control 
-const int    tf = 2000;
-const int    step = 500; // Determines when to write the result file
+const int    tf = 10000;
+const int    step = 5000; // Determines when to write the result file
 
 // Physical parameters
 const double r = 30;
