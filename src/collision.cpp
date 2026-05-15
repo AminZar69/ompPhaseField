@@ -1,12 +1,9 @@
 #include <omp.h>
 #include "../include/common.h"
 #include "../include/collision.h"
-#include "../include/interfacenormal.h"
 #include "../include/viscousforcecal.h"
 
 void Collision() {
-
-    InterfaceNormal();
 
 #pragma omp parallel for schedule(static) 
     for (int x = 1; x < nx + 1; x++) {

@@ -1,16 +1,9 @@
 #include <omp.h>
 #include "../include/common.h"
 #include "../include/hydrocal.h"
-#include "../include/periodicphi.h"
-#include "../include/gradientcal.h"
-#include "../include/chemicalpotential.h"
 #include "../include/viscousforcecal.h"
 
 void HydroCal() {
-
-    PeriodicPhi(phi);
-    GradientCal();
-    ChemicalPotential();
 
 #pragma omp parallel for schedule(static) 
     for (int x = 1; x < nx + 1; x++) {

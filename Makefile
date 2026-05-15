@@ -10,7 +10,7 @@ bindir := bin
 BUILD ?= debug
 
 # Common flags
-cxxflags_common := -fopenmp -Wall -Wextra -std=c++17 -MMD -MP
+cxxflags_common := -fopenmp -Wall -Wextra -std=c++17 -MMD -MP -pthread
 
 # Mode-specific flags 
 cxxflags_release := -O3 -DNDEBUG -march=native -flto
@@ -30,7 +30,7 @@ sources := main.cpp initialization.cpp periodicphi.cpp gradientcal.cpp \
            interfacenormal.cpp chemicalpotential.cpp setsolid.cpp \
            output.cpp periodicpopulations.cpp collision.cpp propagation.cpp \
            stresstensorcal.cpp viscousforcecal.cpp phical.cpp hydrocal.cpp \
-           maxcal.cpp totalmass.cpp
+           maxcal.cpp totalmass.cpp progressbar.cpp
 
 objects := $(sources:%.cpp=$(objdir)/%.o)
 deps    := $(objects:.o=.d)

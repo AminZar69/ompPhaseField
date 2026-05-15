@@ -7,18 +7,24 @@
 
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include <omp.h>
 #include "../include/common.h"
 #include "../include/setsolid.h"
 #include "../include/initialization.h"
 #include "../include/maxcal.h"
 #include "../include/totalmass.h"
+#include "../include/interfacenormal.h"
 #include "../include/collision.h"
 #include "../include/periodicpopulations.h"
 #include "../include/propagation.h"
 #include "../include/phical.h"
+#include "../include/periodicphi.h"
+#include "../include/gradientcal.h"
+#include "../include/chemicalpotential.h"
 #include "../include/hydrocal.h"
 #include "../include/output.h"
+#include "../include/progressbar.h"
 
 
  // Simulation control 
@@ -46,7 +52,7 @@ const double wa[9] = { 4.0 / 9.0,
                        1.0 / 9.0,  1.0 / 9.0,  1.0 / 9.0,  1.0 / 9.0,
                        1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0, 1.0 / 36.0 };
 
-// ime step counter
+// Time step counter
 int t;
 
 // Solid node mask 
@@ -83,28 +89,49 @@ int main() {
         << std::setw(14) << "massPhi" << "\n";
     std::cout << "===================================================\n";
 
+    // Lambda function to be passed in the consructor of progress_bar
+    ProgressBar::OutputFn console_output = [](const std::string& s) {
+        std::cout << s << std::flush;
+    };
+
+    // Start the progress bar running on a different thread
+    ProgressBar progress_bar(console_output);
+    progress_bar.start(tf);
+
     for (t = 0; t <= tf; t++) {
 
         if (t % (step / 5) == 0) {
-            std::cout << std::setw(7) << t
+            // Writing formatted data to a string
+            std::ostringstream oss;
+            oss << std::setw(7) << t
                 << std::setw(15) << std::scientific << std::setprecision(4) << MaxCal(ux)
                 << std::setw(14) << MaxCal(uy)
-                << std::setw(14) << std::fixed << std::setprecision(6) << TotalMass(phi)
-                << "\n";
+                << std::setw(14) << std::fixed << std::setprecision(6) << TotalMass(phi);
+            progress_bar.print_line(oss.str());
         }
 
         if (t % step == 0) {
             Output();
         }
 
+        InterfaceNormal();
         Collision();
         PeriodicPopulations(h);
         PeriodicPopulations(g);
         Propagation(h);
         Propagation(g);
         PhiCal();
+        PeriodicPhi(phi);
+        GradientCal();
+        ChemicalPotential();
         HydroCal();
+
+        // Updating the progress
+        progress_bar.update(t);
     }
+
+    // Stop the progress bar cleanly 
+    progress_bar.stop();
 
     double finishTime = omp_get_wtime();
 
